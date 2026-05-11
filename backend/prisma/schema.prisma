@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StaffRole {
+  OWNER
+  VETERINARIAN
+  ASSISTANT
+  RECEPTIONIST
+}
+
+enum PetSex {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum CareIntervalUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum CareCategory {
+  VACCINATION
+  DEWORMING
+  HEARTWORM
+  OTHER
+}
+
+enum PreventiveRecordSource {
+  CLINIC_RECORDED
+  HISTORICAL_BOOKLET
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESET_PASSWORD
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
+enum FeedbackCategory {
+  BUG
+  IDEA
+  FEATURE_REQUEST
+  GENERAL
+}
+
+enum PreventiveScheduleStatus {
+  OPEN
+  COMPLETED_HERE
+  COMPLETED_ELSEWHERE
+  SUPERSEDED
+}
+
+enum ShareTokenType {
+  EMERGENCY
+  FULL_PROFILE
+}
+
+enum AuthSessionKind {
+  STAFF
+  OWNER
+}
+
+model Clinic {
+  id                  String               @id @default(cuid())
+  name                String
+  phone               String?
+  address             String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  staff               Staff[]
+  petAccesses         ClinicPetAccess[]
+  visits              Visit[]
+  appointments        Appointment[]
+  careTypes           CareType[]
+  preventiveRecords   PreventiveRecord[]
+  preventiveSchedules PreventiveSchedule[]
+  allergies           PetAllergy[]
+  medications         PetMedication[]
+  dietNotes           PetDietNote[]
+  audits              AuditEntry[]
+  feedbackSubmissions FeedbackSubmission[]
+}
+
+model Staff {
+  id                  String               @id @default(cuid())
+  clinicId            String
+  fullName            String
+  email               String               @unique
+  phone               String?
+  passwordHash        String
+  role                StaffRole
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  clinic              Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  attendedVisits      Visit[]              @relation("AttendedVisits")
+  createdVisits       Visit[]              @relation("CreatedVisits")
+  createdAppointments Appointment[]        @relation("CreatedAppointments")
+  administeredRecords PreventiveRecord[]   @relation("AdministeredRecords")
+  createdRecords      PreventiveRecord[]   @relation("CreatedRecords")
+  auditEntries        AuditEntry[]         @relation("ActorAudits")
+  feedbackSubmissions FeedbackSubmission[]
+  authSessions        AuthSession[]
+
+  @@index([clinicId])
+}
+
+model Owner {
+  id           String        @id @default(cuid())
+  fullName     String
+  mobile       String        @unique
+  address      String
+  email        String?
+  claimedAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  pets         Pet[]
+  shareTokens  ShareToken[]
+  authSessions AuthSession[]
+
+  @@index([fullName])
+}
+
+model AuthSession {
+  id               String          @id @default(cuid())
+  kind             AuthSessionKind
+  staffId          String?
+  ownerId          String?
+  refreshTokenHash String          @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  staff            Staff?          @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  owner            Owner?          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([kind, staffId, expiresAt])
+  @@index([kind, ownerId, expiresAt])
+  @@index([expiresAt])
+}
+
+model Pet {
+  id                  String               @id @default(cuid())
+  ownerId             String
+  name                String
+  avatarUrl           String?
+  species             String
+  breed               String
+  color               String
+  weightKg            Float?
+  sex                 PetSex
+  birthDate           DateTime?
+  ageLabel            String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  owner               Owner                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  clinicAccesses      ClinicPetAccess[]
+  visits              Visit[]
+  appointments        Appointment[]
+  preventiveRecords   PreventiveRecord[]
+  preventiveSchedules PreventiveSchedule[]
+  allergies           PetAllergy[]
+  medications         PetMedication[]
+  dietNotes           PetDietNote[]
+  shareTokens         ShareToken[]
+
+  @@index([ownerId, name])
+  @@index([name])
+}
+
+model ClinicPetAccess {
+  id        String   @id @default(cuid())
+  clinicId  String
+  petId     String
+  linkedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, petId])
+  @@index([clinicId])
+  @@index([petId])
+}
+
+model PetAllergy {
+  id        String   @id @default(cuid())
+  petId     String
+  clinicId  String
+  allergen  String
+  severity  String?
+  reaction  String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([petId, isActive])
+  @@index([clinicId, updatedAt])
+}
+
+model PetMedication {
+  id        String    @id @default(cuid())
+  petId     String
+  clinicId  String
+  name      String
+  dose      String?
+  frequency String?
+  route     String?
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  pet       Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([petId, isActive])
+  @@index([clinicId, updatedAt])
+  @@index([name])
+}
+
+model PetDietNote {
+  id        String   @id @default(cuid())
+  petId     String
+  clinicId  String
+  dietName  String
+  remarks   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([petId, isActive])
+  @@index([clinicId, updatedAt])
+}
+
+model Visit {
+  id             String       @id @default(cuid())
+  clinicId       String
+  petId          String
+  appointmentId  String?      @unique
+  attendedById   String
+  createdById    String
+  visitDate      DateTime
+  weightKg       Float?
+  reasonForVisit String
+  findingsNotes  String
+  treatmentGiven String
+  diagnosis      String?
+  followUpNotes  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet            Pet          @relation(fields: [petId], references: [id], onDelete: Cascade)
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  attendedBy     Staff        @relation("AttendedVisits", fields: [attendedById], references: [id], onDelete: Restrict)
+  createdBy      Staff        @relation("CreatedVisits", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([clinicId, visitDate])
+  @@index([petId, visitDate])
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  clinicId     String
+  petId        String
+  createdById  String
+  scheduledFor DateTime
+  reason       String
+  notes        String
+  status       AppointmentStatus @default(SCHEDULED)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  clinic       Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet          Pet               @relation(fields: [petId], references: [id], onDelete: Cascade)
+  visit        Visit?
+  createdBy    Staff             @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([clinicId, scheduledFor])
+  @@index([clinicId, status, scheduledFor])
+  @@index([petId, scheduledFor])
+}
+
+model CareType {
+  id                   String               @id @default(cuid())
+  clinicId             String
+  name                 String
+  category             CareCategory         @default(OTHER)
+  isRecurring          Boolean              @default(true)
+  defaultIntervalValue Int
+  defaultIntervalUnit  CareIntervalUnit
+  defaultIntervalDays  Int
+  isActive             Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  clinic               Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  records              PreventiveRecord[]
+  schedules            PreventiveSchedule[]
+
+  @@unique([clinicId, name, defaultIntervalValue, defaultIntervalUnit])
+  @@index([clinicId, category, name])
+  @@index([clinicId, name])
+}
+
+model PreventiveRecord {
+  id                String               @id @default(cuid())
+  clinicId          String
+  petId             String
+  careTypeId        String
+  administeredById  String
+  createdById       String
+  administeredOn    DateTime
+  nextDueDate       DateTime?
+  dueDateOverridden Boolean              @default(false)
+  productName       String?
+  manufacturer      String?
+  lotNumber         String?
+  serialNumber      String?
+  expiryDate        DateTime?
+  sourceType        PreventiveRecordSource @default(CLINIC_RECORDED)
+  sourceNote        String?
+  notes             String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  clinic            Clinic               @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet               Pet                  @relation(fields: [petId], references: [id], onDelete: Cascade)
+  careType          CareType             @relation(fields: [careTypeId], references: [id], onDelete: Restrict)
+  administeredBy    Staff                @relation("AdministeredRecords", fields: [administeredById], references: [id], onDelete: Restrict)
+  createdBy         Staff                @relation("CreatedRecords", fields: [createdById], references: [id], onDelete: Restrict)
+  sourceSchedules   PreventiveSchedule[] @relation("ScheduleSourceRecord")
+  resolvedSchedules PreventiveSchedule[] @relation("ScheduleResolvedByRecord")
+
+  @@index([clinicId, nextDueDate])
+  @@index([petId, administeredOn])
+}
+
+model PreventiveSchedule {
+  id                 String                   @id @default(cuid())
+  clinicId           String
+  petId              String
+  careTypeId         String
+  status             PreventiveScheduleStatus @default(OPEN)
+  nextDueDate        DateTime
+  sourceRecordId     String?
+  resolvedByRecordId String?
+  resolvedAt         DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  clinic             Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet                Pet                      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  careType           CareType                 @relation(fields: [careTypeId], references: [id], onDelete: Restrict)
+  sourceRecord       PreventiveRecord?        @relation("ScheduleSourceRecord", fields: [sourceRecordId], references: [id], onDelete: SetNull)
+  resolvedByRecord   PreventiveRecord?        @relation("ScheduleResolvedByRecord", fields: [resolvedByRecordId], references: [id], onDelete: SetNull)
+
+  @@unique([clinicId, petId, careTypeId])
+  @@index([clinicId, status, nextDueDate])
+  @@index([petId, careTypeId, status])
+}
+
+model AuditEntry {
+  id               String      @id @default(cuid())
+  clinicId         String
+  actorId          String?
+  entityType       String
+  entityId         String
+  action           AuditAction
+  summary          String?
+  previousSnapshot String?
+  nextSnapshot     String?
+  createdAt        DateTime    @default(now())
+  clinic           Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  actor            Staff?      @relation("ActorAudits", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model FeedbackSubmission {
+  id        String           @id @default(cuid())
+  clinicId  String
+  staffId   String
+  category  FeedbackCategory
+  message   String
+  createdAt DateTime         @default(now())
+  clinic    Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  staff     Staff            @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, createdAt])
+  @@index([staffId, createdAt])
+}
+
+model OwnerOtp {
+  id        String    @id @default(cuid())
+  mobile    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([mobile, expiresAt])
+}
+
+model ShareToken {
+  id           String         @id @default(cuid())
+  ownerId      String
+  petId        String
+  type         ShareTokenType
+  publicToken  String         @unique
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  lastViewedAt DateTime?
+  viewCount    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  owner        Owner          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pet          Pet            @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, petId, type])
+  @@index([petId, type])
+}

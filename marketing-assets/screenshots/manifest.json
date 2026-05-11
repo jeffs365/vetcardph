@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-05-08T02:19:08.240Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "files": [
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/landing-home.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-dashboard.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-pet-search.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-pet-profile-overview.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-pet-profile-vaccines.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-visit-detail.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/clinic-calendar-followups.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/public-share-luna-record.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/owner-home.png",
+    "/Users/mini/Startup/vetcard/marketing-assets/screenshots/mobile/owner-pet-profile.png"
+  ]
+}

@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* VetCard brand system.
+   Palette anchored to deep teal + warm orange from the VetCard mark.
+   All colors MUST be HSL. */
+
+@layer base {
+  :root {
+    /* Paper / surfaces */
+    --background: 40 33% 98%;         /* warm off-white */
+    --foreground: 191 53% 17%;        /* deep brand teal ink */
+
+    --card: 0 0% 100%;
+    --card-foreground: 191 53% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 191 53% 17%;
+
+    /* VetCard Teal */
+    --primary: 188 68% 23%;           /* brand teal */
+    --primary-foreground: 0 0% 100%;
+    --primary-deep: 188 78% 17%;
+    --primary-soft: 184 46% 91%;
+    --primary-glow: 188 46% 54%;
+
+    /* Secondary neutrals */
+    --secondary: 39 29% 94%;
+    --secondary-foreground: 191 35% 25%;
+
+    --muted: 36 24% 95%;
+    --muted-foreground: 192 13% 35%;
+
+    --accent: 31 100% 94%;
+    --accent-foreground: 191 53% 17%;
+
+    /* Brand orange */
+    --tertiary: 27 97% 52%;
+    --tertiary-foreground: 0 0% 100%;
+    --tertiary-soft: 29 100% 93%;
+
+    --destructive: 0 75% 42%;         /* #ba1a1a */
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 6 100% 92%;   /* #ffdad6 */
+
+    --success: 160 54% 31%;
+    --success-soft: 156 48% 90%;
+
+    --border: 35 18% 86%;
+    --input: 35 18% 86%;
+    --ring: 188 68% 23%;
+
+    --radius: 1rem;
+
+    /* Effects */
+    --shadow-card: 0 1px 2px hsl(191 53% 17% / 0.04), 0 1px 0 hsl(35 18% 86% / 0.7);
+    --shadow-float: 0 14px 36px -18px hsl(188 68% 23% / 0.32);
+    --shadow-soft: 0 10px 26px -18px hsl(191 53% 17% / 0.18);
+
+    --gradient-primary: linear-gradient(135deg, hsl(188 68% 23%), hsl(188 78% 17%));
+    --gradient-paper: linear-gradient(180deg, hsl(40 33% 98%), hsl(36 24% 95%));
+
+    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 191 42% 8%;
+    --foreground: 40 33% 96%;
+    --card: 190 34% 11%;
+    --card-foreground: 40 33% 96%;
+    --popover: 190 34% 11%;
+    --popover-foreground: 40 33% 96%;
+    --primary: 184 49% 67%;
+    --primary-foreground: 186 100% 12%;
+    --primary-deep: 184 49% 58%;
+    --primary-soft: 188 42% 18%;
+    --primary-glow: 184 49% 67%;
+    --secondary: 190 24% 17%;
+    --secondary-foreground: 40 33% 96%;
+    --muted: 190 24% 17%;
+    --muted-foreground: 40 18% 73%;
+    --accent: 28 32% 20%;
+    --accent-foreground: 40 33% 96%;
+    --tertiary: 27 97% 58%;
+    --tertiary-foreground: 0 0% 100%;
+    --tertiary-soft: 27 42% 24%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 40% 22%;
+    --success: 160 42% 53%;
+    --success-soft: 160 30% 18%;
+    --border: 190 18% 22%;
+    --input: 190 18% 22%;
+    --ring: 184 49% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at top, hsl(var(--primary-soft) / 0.5), transparent 42%),
+      radial-gradient(circle at bottom right, hsl(var(--tertiary-soft) / 0.4), transparent 35%);
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: 'Manrope', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  /* App canvas — phone-shaped on desktop, full-bleed on mobile */
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
+
+  .app-canvas {
+    @apply relative mx-auto flex w-full max-w-[440px] flex-col bg-background;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    box-shadow: 0 0 0 1px hsl(var(--border)), 0 30px 80px -20px hsl(218 41% 12% / 0.15);
+  }
+  @media (min-width: 768px) {
+    .app-shell {
+      @apply flex items-stretch justify-center py-0;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
+      background:
+        radial-gradient(ellipse at top, hsl(var(--primary-soft) / 0.55), transparent 58%),
+        radial-gradient(circle at bottom right, hsl(var(--tertiary-soft) / 0.5), transparent 32%),
+        var(--gradient-paper);
+    }
+    .app-canvas {
+      @apply my-8 rounded-[2.25rem] overflow-hidden;
+      height: calc(100dvh - 4rem);
+      min-height: 860px;
+    }
+  }
+
+  .index-card {
+    @apply bg-card rounded-2xl border border-border/70 p-5;
+    box-shadow: var(--shadow-card);
+  }
+
+  .label-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+}

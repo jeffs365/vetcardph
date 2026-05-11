@@ -1,0 +1,35 @@
+{
+  "name": "vetcard",
+  "version": "1.0.0",
+  "description": "Vetcard monorepo",
+  "scripts": {
+    "dev:web": "npm --workspace web run dev",
+    "dev:backend": "npm --workspace @vetcard/backend run dev",
+    "build": "npm run db:generate && npm --workspace @vetcard/backend run build && npm --workspace web run build",
+    "start": "npm --workspace @vetcard/backend run start",
+    "db:start": "docker compose up -d postgres",
+    "db:stop": "docker compose stop postgres",
+    "db:push": "npm --workspace @vetcard/backend run db:push",
+    "db:migrate": "npm --workspace @vetcard/backend run db:migrate",
+    "db:migrate:deploy": "npm --workspace @vetcard/backend run db:migrate:deploy",
+    "db:generate": "npm --workspace @vetcard/backend run db:generate",
+    "db:seed": "npm --workspace @vetcard/backend run seed",
+    "lint:web": "npm --workspace web run lint"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "private": true,
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "workspaces": [
+    "backend",
+    "web"
+  ]
+}
