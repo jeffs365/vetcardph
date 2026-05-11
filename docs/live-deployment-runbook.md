@@ -79,7 +79,7 @@ Configure runtime and startup:
 az webapp config set \
   --name "$APP" \
   --resource-group "$RESOURCE_GROUP" \
-  --startup-file "npm start"
+  --startup-file "NODE_PATH=/home/site/wwwroot/app_node_modules node /home/site/wwwroot/backend/dist/index.js"
 
 az webapp config appsettings set \
   --name "$APP" \
@@ -102,13 +102,13 @@ Generate secrets locally with:
 openssl rand -base64 48
 ```
 
-Enable build during deployment:
+Disable App Service build during deployment. The GitHub workflow builds a Linux x64 runtime package and deploys that package directly. This avoids App Service/Kudu rebuilding native dependencies such as `sharp` on the B1 worker.
 
 ```bash
 az webapp config appsettings set \
   --name "$APP" \
   --resource-group "$RESOURCE_GROUP" \
-  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false SCM_COMMAND_IDLE_TIMEOUT=1800
 ```
 
 ## 4. Connect GitHub Actions to Azure
@@ -124,7 +124,14 @@ az webapp deployment list-publishing-profiles \
 
 In GitHub, add a repository secret named `AZURE_WEBAPP_PUBLISH_PROFILE` with the XML content from that file.
 
-The workflow at `.github/workflows/azure-app-service.yml` deploys on pushes to `main` and can also be run manually.
+The workflow at `.github/workflows/azure-app-service.yml` deploys on pushes to `main` and can also be run manually. It creates a runtime zip with:
+
+- `backend/dist`
+- `backend/prisma`
+- `web/dist`
+- Linux x64 production dependencies in `app_node_modules`
+
+The Azure startup command uses `NODE_PATH=/home/site/wwwroot/app_node_modules` so Node can resolve those dependencies without relying on Kudu's `node_modules` tar/symlink optimization.
 
 ## 5. Point `vetcard.ph` to Azure
 

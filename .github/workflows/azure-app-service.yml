@@ -30,12 +30,40 @@ jobs:
       - name: Build backend and web app
         run: npm run build
 
-      - name: Create source deployment package
-        run: git archive --format zip --output vetcard.zip HEAD
+      - name: Create Azure runtime package
+        run: |
+          mkdir -p runtime/backend runtime/web runtime/uploads
+          cp -R backend/dist backend/prisma runtime/backend/
+          cp -R web/dist runtime/web/
+
+          node <<'NODE'
+          const fs = require('node:fs')
+          const backend = require('./backend/package.json')
+          const root = require('./package.json')
+          const pkg = {
+            name: 'vetcard-runtime',
+            version: root.version || '1.0.0',
+            private: true,
+            type: 'commonjs',
+            scripts: { start: 'node backend/dist/index.js' },
+            engines: root.engines || { node: '>=22 <25' },
+            dependencies: backend.dependencies,
+            devDependencies: { prisma: backend.devDependencies.prisma },
+            prisma: { schema: 'backend/prisma/schema.prisma' },
+          }
+          fs.writeFileSync('runtime/package.json', JSON.stringify(pkg, null, 2))
+          NODE
+
+          cd runtime
+          npm install --include=optional
+          npx prisma generate --schema backend/prisma/schema.prisma
+          npm prune --omit=dev --include=optional
+          mv node_modules app_node_modules
+          zip -qr ../vetcard-runtime.zip .
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: vetcard.zip
+          package: vetcard-runtime.zip
