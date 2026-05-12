@@ -94,7 +94,7 @@ az webapp config appsettings set \
     ALLOW_CLINIC_REGISTRATION=false \
     OWNER_OTP_DELIVERY_MODE=disabled \
     PHILSMS_SENDER_ID=PhilSMS \
-    PHILSMS_API_URL=https://app.philsms.com/api/v3/sms/send \
+    PHILSMS_API_URL=https://dashboard.philsms.com/api/v3/sms/send \
     JWT_SECRET="<generate-32-plus-random-chars>" \
     COOKIE_SECRET="<generate-32-plus-random-chars>" \
     DATABASE_URL="<supabase-session-pooler-url>"

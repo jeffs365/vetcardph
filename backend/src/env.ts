@@ -32,7 +32,7 @@ const envSchema = z.object({
   OWNER_OTP_DELIVERY_MODE: z.enum(['dev-response', 'disabled', 'philsms']).optional(),
   PHILSMS_API_TOKEN: z.string().min(1).optional(),
   PHILSMS_SENDER_ID: z.string().min(1).max(11).default('PhilSMS'),
-  PHILSMS_API_URL: z.string().url().default('https://app.philsms.com/api/v3/sms/send'),
+  PHILSMS_API_URL: z.string().url().default('https://dashboard.philsms.com/api/v3/sms/send'),
 })
 
 const parsedEnv = envSchema.parse(process.env)
