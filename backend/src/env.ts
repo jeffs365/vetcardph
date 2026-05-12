@@ -28,6 +28,16 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().min(1).default('*'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   SERVE_WEB_APP: booleanEnv.default(false),
+  ALLOW_CLINIC_REGISTRATION: booleanEnv.optional(),
+  OWNER_OTP_DELIVERY_MODE: z.enum(['dev-response', 'disabled']).optional(),
 })
 
-export const env = envSchema.parse(process.env)
+const parsedEnv = envSchema.parse(process.env)
+
+export const env = {
+  ...parsedEnv,
+  ALLOW_CLINIC_REGISTRATION:
+    parsedEnv.ALLOW_CLINIC_REGISTRATION ?? parsedEnv.NODE_ENV !== 'production',
+  OWNER_OTP_DELIVERY_MODE:
+    parsedEnv.OWNER_OTP_DELIVERY_MODE ?? (parsedEnv.NODE_ENV === 'production' ? 'disabled' : 'dev-response'),
+}

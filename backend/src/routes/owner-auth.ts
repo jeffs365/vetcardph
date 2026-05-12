@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { env } from '../env'
@@ -33,6 +33,25 @@ const updateOwnerSchema = z.object({
   address: z.string().trim().max(300).optional(),
 })
 
+function ensureOwnerOtpDeliveryConfigured(reply: FastifyReply) {
+  if (env.OWNER_OTP_DELIVERY_MODE !== 'disabled') {
+    return false
+  }
+
+  reply.code(503).send({
+    message: 'Owner verification codes are not available yet. Please contact the clinic for access.',
+  })
+  return true
+}
+
+function ownerOtpResponse(code: string, expiresInSeconds: number) {
+  return {
+    success: true,
+    expiresInSeconds,
+    ...(env.OWNER_OTP_DELIVERY_MODE === 'dev-response' ? { devCode: code } : {}),
+  }
+}
+
 export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
   app.post('/request-code', async (request, reply) => {
     const input = requestCodeSchema.parse(request.body)
@@ -51,6 +70,10 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    if (ensureOwnerOtpDeliveryConfigured(reply)) {
+      return
+    }
+
     const otp = await issueOwnerOtpCode(normalizedPhone)
 
     if (otp.rateLimited) {
@@ -59,11 +82,7 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    return {
-      success: true,
-      expiresInSeconds: otp.expiresInSeconds,
-      ...(env.NODE_ENV === 'development' ? { devCode: otp.code } : {}),
-    }
+    return ownerOtpResponse(otp.code, otp.expiresInSeconds)
   })
 
   app.post('/register', async (request, reply) => {
@@ -83,6 +102,10 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    if (ensureOwnerOtpDeliveryConfigured(reply)) {
+      return
+    }
+
     await prisma.owner.create({
       data: {
         fullName: input.fullName,
@@ -99,11 +122,7 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    return {
-      success: true,
-      expiresInSeconds: otp.expiresInSeconds,
-      ...(env.NODE_ENV === 'development' ? { devCode: otp.code } : {}),
-    }
+    return ownerOtpResponse(otp.code, otp.expiresInSeconds)
   })
 
   app.post('/verify-code', async (request, reply) => {

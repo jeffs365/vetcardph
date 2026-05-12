@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db'
+import { env } from '../env'
 import { createAuditEntry } from '../lib/audit'
 import {
   clearStaffAuthCookies,
@@ -65,6 +66,12 @@ const updateClinicSchema = z.object({
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post('/register-clinic', async (request, reply) => {
+    if (!env.ALLOW_CLINIC_REGISTRATION) {
+      return reply.code(403).send({
+        message: 'Clinic registration is currently invite-only.',
+      })
+    }
+
     const input = registerClinicSchema.parse(request.body)
 
     const existing = await prisma.staff.findUnique({ where: { email: input.email } })

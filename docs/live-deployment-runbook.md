@@ -91,6 +91,8 @@ az webapp config appsettings set \
     PORT=8080 \
     CORS_ORIGIN=https://vetcard.ph,https://www.vetcard.ph \
     COOKIE_SECURE=true \
+    ALLOW_CLINIC_REGISTRATION=false \
+    OWNER_OTP_DELIVERY_MODE=disabled \
     JWT_SECRET="<generate-32-plus-random-chars>" \
     COOKIE_SECRET="<generate-32-plus-random-chars>" \
     DATABASE_URL="<supabase-session-pooler-url>"
@@ -113,18 +115,25 @@ az webapp config appsettings set \
 
 ## 4. Connect GitHub Actions to Azure
 
-Download the publish profile:
+Use GitHub Actions OIDC instead of a publish-profile secret. Create an Azure app registration,
+add a federated credential scoped to the repository branch, and grant it deploy rights to the
+App Service:
 
 ```bash
-az webapp deployment list-publishing-profiles \
-  --name "$APP" \
-  --resource-group "$RESOURCE_GROUP" \
-  --xml > /tmp/vetcard-publish-profile.xml
+az ad app create --display-name vetcard-github-actions-oidc
+
+az ad app federated-credential create \
+  --id "<azure-app-object-id>" \
+  --parameters ./github-oidc-credential.json
+
+az role assignment create \
+  --assignee "<azure-app-client-id>" \
+  --role Contributor \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$APP"
 ```
 
-In GitHub, add a repository secret named `AZURE_WEBAPP_PUBLISH_PROFILE` with the XML content from that file.
-
-The workflow at `.github/workflows/azure-app-service.yml` deploys on pushes to `main` and can also be run manually. It creates a runtime zip with:
+The workflow at `.github/workflows/azure-app-service.yml` deploys on pushes to `main` and can
+also be run manually. It logs into Azure through OIDC and creates a runtime zip with:
 
 - `backend/dist`
 - `backend/prisma`
