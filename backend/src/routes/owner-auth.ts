@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { env } from '../env'
@@ -10,6 +10,7 @@ import {
   verifyOwnerCsrfToken,
 } from '../lib/auth-sessions'
 import { issueOwnerOtpCode, verifyOwnerOtpCode } from '../lib/owner-otp'
+import { deliverOwnerOtp, OtpDeliveryError } from '../lib/otp-delivery'
 import { requireOwnerSession, toOwnerSessionUser } from '../lib/owner-session'
 import { normalizePhilippineMobile } from '../lib/phones'
 
@@ -52,6 +53,27 @@ function ownerOtpResponse(code: string, expiresInSeconds: number) {
   }
 }
 
+async function deliverOtpOrReply(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  mobile: string,
+  code: string,
+) {
+  try {
+    await deliverOwnerOtp(mobile, code)
+    return true
+  } catch (error) {
+    if (error instanceof OtpDeliveryError) {
+      return reply.code(503).send({ message: error.message })
+    }
+
+    request.log.error({ err: error }, 'Owner OTP delivery failed.')
+    return reply.code(502).send({
+      message: 'Verification code could not be sent. Please try again shortly.',
+    })
+  }
+}
+
 export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
   app.post('/request-code', async (request, reply) => {
     const input = requestCodeSchema.parse(request.body)
@@ -80,6 +102,11 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(429).send({
         message: 'Too many code requests. Please wait 15 minutes before trying again.',
       })
+    }
+
+    const delivered = await deliverOtpOrReply(request, reply, normalizedPhone, otp.code)
+    if (delivered !== true) {
+      return delivered
     }
 
     return ownerOtpResponse(otp.code, otp.expiresInSeconds)
@@ -120,6 +147,11 @@ export const ownerAuthRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(429).send({
         message: 'Too many code requests. Please wait 15 minutes before trying again.',
       })
+    }
+
+    const delivered = await deliverOtpOrReply(request, reply, normalizedPhone, otp.code)
+    if (delivered !== true) {
+      return delivered
     }
 
     return ownerOtpResponse(otp.code, otp.expiresInSeconds)

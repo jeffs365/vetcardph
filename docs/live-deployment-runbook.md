@@ -93,6 +93,8 @@ az webapp config appsettings set \
     COOKIE_SECURE=true \
     ALLOW_CLINIC_REGISTRATION=false \
     OWNER_OTP_DELIVERY_MODE=disabled \
+    PHILSMS_SENDER_ID=PhilSMS \
+    PHILSMS_API_URL=https://app.philsms.com/api/v3/sms/send \
     JWT_SECRET="<generate-32-plus-random-chars>" \
     COOKIE_SECRET="<generate-32-plus-random-chars>" \
     DATABASE_URL="<supabase-session-pooler-url>"
@@ -102,6 +104,18 @@ Generate secrets locally with:
 
 ```bash
 openssl rand -base64 48
+```
+
+When PhilSMS is ready, add the token and enable live OTP:
+
+```bash
+az webapp config appsettings set \
+  --name "$APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --settings \
+    OWNER_OTP_DELIVERY_MODE=philsms \
+    PHILSMS_API_TOKEN="<philsms-api-token>" \
+    PHILSMS_SENDER_ID=PhilSMS
 ```
 
 Disable App Service build during deployment. The GitHub workflow builds a Linux x64 runtime package and deploys that package directly. This avoids App Service/Kudu rebuilding native dependencies such as `sharp` on the B1 worker.

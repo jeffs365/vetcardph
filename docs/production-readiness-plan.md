@@ -13,9 +13,10 @@ This is the checklist for moving VetCard from public demo to a real production p
 ## Must-Have Before Real Clinic Use
 
 1. Add real OTP delivery.
-   - Choose an SMS provider that works reliably for Philippine mobile numbers.
-   - Wire provider credentials into Azure app settings.
-   - Change `OWNER_OTP_DELIVERY_MODE` from `disabled` to the real delivery mode after implementation.
+   - VetCard supports PhilSMS through `OWNER_OTP_DELIVERY_MODE=philsms`.
+   - Store the PhilSMS API token in Azure as `PHILSMS_API_TOKEN`.
+   - Use the default `PhilSMS` sender for initial testing, then switch `PHILSMS_SENDER_ID` to `VetCard` after sender ID approval.
+   - Change `OWNER_OTP_DELIVERY_MODE` from `disabled` to `philsms` after a successful real-phone test.
    - Keep `dev-response` limited to local development only.
 
 2. Keep public clinic registration closed.

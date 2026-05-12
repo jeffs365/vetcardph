@@ -29,7 +29,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   SERVE_WEB_APP: booleanEnv.default(false),
   ALLOW_CLINIC_REGISTRATION: booleanEnv.optional(),
-  OWNER_OTP_DELIVERY_MODE: z.enum(['dev-response', 'disabled']).optional(),
+  OWNER_OTP_DELIVERY_MODE: z.enum(['dev-response', 'disabled', 'philsms']).optional(),
+  PHILSMS_API_TOKEN: z.string().min(1).optional(),
+  PHILSMS_SENDER_ID: z.string().min(1).max(11).default('PhilSMS'),
+  PHILSMS_API_URL: z.string().url().default('https://app.philsms.com/api/v3/sms/send'),
 })
 
 const parsedEnv = envSchema.parse(process.env)
