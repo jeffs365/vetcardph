@@ -8,7 +8,14 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: vetcard-ph-prod
+  AZURE_CLIENT_ID: 77afa360-bb04-4bdf-bec0-491f242d8ee5
+  AZURE_TENANT_ID: a903f77c-d96c-471c-9411-ed043ee10aa4
+  AZURE_SUBSCRIPTION_ID: 243d62a4-9c42-47b6-81e4-d9f18457b2da
   NODE_VERSION: 22.x
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   build-and-deploy:
@@ -61,9 +68,15 @@ jobs:
           mv node_modules app_node_modules
           zip -qr ../vetcard-runtime.zip .
 
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: vetcard-runtime.zip
