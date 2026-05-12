@@ -37,7 +37,7 @@ const parsedEnv = envSchema.parse(process.env)
 export const env = {
   ...parsedEnv,
   ALLOW_CLINIC_REGISTRATION:
-    parsedEnv.ALLOW_CLINIC_REGISTRATION ?? parsedEnv.NODE_ENV !== 'production',
+    parsedEnv.ALLOW_CLINIC_REGISTRATION ?? (parsedEnv.NODE_ENV !== 'production'),
   OWNER_OTP_DELIVERY_MODE:
     parsedEnv.OWNER_OTP_DELIVERY_MODE ?? (parsedEnv.NODE_ENV === 'production' ? 'disabled' : 'dev-response'),
 }

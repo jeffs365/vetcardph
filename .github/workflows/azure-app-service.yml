@@ -80,3 +80,6 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: vetcard-runtime.zip
+
+      - name: Restart Azure App Service
+        run: az webapp restart --name "$AZURE_WEBAPP_NAME" --resource-group vetcard-prod-rg

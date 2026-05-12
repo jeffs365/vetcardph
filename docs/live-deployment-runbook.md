@@ -133,7 +133,8 @@ az role assignment create \
 ```
 
 The workflow at `.github/workflows/azure-app-service.yml` deploys on pushes to `main` and can
-also be run manually. It logs into Azure through OIDC and creates a runtime zip with:
+also be run manually. It logs into Azure through OIDC, creates a runtime zip, deploys it, and
+restarts the App Service so the new Node process is active immediately. The runtime zip includes:
 
 - `backend/dist`
 - `backend/prisma`
