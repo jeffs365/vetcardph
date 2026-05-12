@@ -12,6 +12,7 @@ import {
   Pill,
   QrCode,
   ShieldCheck,
+  SquarePen,
   Stethoscope,
   Syringe,
 } from "lucide-react";
@@ -168,13 +169,22 @@ export default function OwnerPetProfile() {
         </Link>
       }
       headerEnd={
-        <Link
-          to="/owner/share"
-          aria-label="Open share hub"
-          className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <QrCode className="size-4" />
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            to={`/owner/pets/${pet.id}/edit`}
+            aria-label="Edit pet profile"
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <SquarePen className="size-4" />
+          </Link>
+          <Link
+            to="/owner/share"
+            aria-label="Open share hub"
+            className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <QrCode className="size-4" />
+          </Link>
+        </div>
       }
     >
       <div className="space-y-5 px-5 pb-8 pt-4">

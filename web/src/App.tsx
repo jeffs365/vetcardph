@@ -98,6 +98,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/owner/pets/:id/edit"
+                element={
+                  <OwnerProtectedRoute>
+                    <OwnerAddPet />
+                  </OwnerProtectedRoute>
+                }
+              />
+              <Route
                 path="/owner/pets/:id"
                 element={
                   <OwnerProtectedRoute>

@@ -1,4 +1,8 @@
+import crypto from 'node:crypto'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import type { FastifyPluginAsync } from 'fastify'
+import sharp from 'sharp'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { parseDateInput } from '../lib/dates'
@@ -15,6 +19,7 @@ import {
 
 const ownerPetSchema = z.object({
   petName: z.string().trim().min(1).max(80),
+  avatarUrl: z.string().trim().startsWith('/uploads/pets/avatar/').max(255).optional().or(z.literal('')),
   species: z.string().trim().min(1).max(40),
   breed: z.string().trim().min(1).max(80),
   color: z.string().trim().min(1).max(80),
@@ -24,7 +29,69 @@ const ownerPetSchema = z.object({
   ageLabel: z.string().trim().max(40).optional().or(z.literal('')),
 })
 
+const petAvatarDir = path.resolve(__dirname, '../../../uploads/pets/avatar')
+
+async function ensurePetAvatarDir() {
+  await fs.mkdir(petAvatarDir, { recursive: true })
+}
+
+function createAvatarFilename(ownerId: string) {
+  return `owner-${ownerId}-${Date.now()}-${crypto.randomUUID()}.webp`
+}
+
+async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
+  if (!avatarUrl) {
+    return
+  }
+
+  const filename = path.basename(avatarUrl)
+  if (!filename) {
+    return
+  }
+
+  await fs.rm(path.join(petAvatarDir, filename), { force: true })
+}
+
 export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
+  app.post('/pets/avatar/upload', async (request, reply) => {
+    const session = await requireOwnerSession(request, reply)
+    if (!session) {
+      return
+    }
+
+    const file = await request.file()
+    if (!file) {
+      return reply.code(400).send({ message: 'Image file is required.' })
+    }
+
+    if (!file.mimetype.startsWith('image/')) {
+      return reply.code(400).send({ message: 'Only image uploads are allowed.' })
+    }
+
+    const buffer = await file.toBuffer()
+    if (!buffer.length) {
+      return reply.code(400).send({ message: 'Uploaded image is empty.' })
+    }
+
+    await ensurePetAvatarDir()
+    const filename = createAvatarFilename(session.ownerId)
+    const outputPath = path.join(petAvatarDir, filename)
+
+    try {
+      await sharp(buffer)
+        .rotate()
+        .resize(512, 512, { fit: 'cover', position: 'centre' })
+        .webp({ quality: 82 })
+        .toFile(outputPath)
+    } catch {
+      return reply.code(400).send({ message: 'Could not process that image file.' })
+    }
+
+    return reply.code(201).send({
+      avatarUrl: `/uploads/pets/avatar/${filename}`,
+    })
+  })
+
   app.post('/pets', async (request, reply) => {
     const session = await requireOwnerSession(request, reply)
     if (!session) {
@@ -38,6 +105,7 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
       data: {
         ownerId: session.ownerId,
         name: input.petName,
+        avatarUrl: input.avatarUrl || null,
         species: input.species,
         breed: input.breed,
         color: input.color,
@@ -52,6 +120,59 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
     })
 
     return reply.code(201).send({ pet })
+  })
+
+  app.put('/pets/:petId', async (request, reply) => {
+    const session = await requireOwnerSession(request, reply)
+    if (!session) {
+      return
+    }
+
+    const params = z.object({ petId: z.string().min(1) }).parse(request.params)
+    const input = ownerPetSchema.parse(request.body)
+    const birthDate = input.birthDate ? parseDateInput(input.birthDate) : null
+
+    const existing = await prisma.pet.findFirst({
+      where: {
+        id: params.petId,
+        ownerId: session.ownerId,
+      },
+      select: {
+        id: true,
+        avatarUrl: true,
+      },
+    })
+
+    if (!existing) {
+      return reply.code(404).send({ message: 'Pet not found.' })
+    }
+
+    const previousAvatarUrl = existing.avatarUrl
+    const nextAvatarUrl = input.avatarUrl === '' ? null : input.avatarUrl ?? existing.avatarUrl
+
+    const pet = await prisma.pet.update({
+      where: { id: existing.id },
+      data: {
+        name: input.petName,
+        avatarUrl: nextAvatarUrl,
+        species: input.species,
+        breed: input.breed,
+        color: input.color,
+        weightKg: input.weightKg,
+        sex: input.sex,
+        birthDate,
+        ageLabel: input.ageLabel || null,
+      },
+      select: {
+        id: true,
+      },
+    })
+
+    if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
+      await deleteStoredAvatar(previousAvatarUrl)
+    }
+
+    return { pet }
   })
 
   app.get('/pets', async (request, reply) => {
