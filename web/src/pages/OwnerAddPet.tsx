@@ -71,11 +71,16 @@ export default function OwnerAddPet() {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(avatarFile);
-    setAvatarPreviewUrl(objectUrl);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatarPreviewUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(avatarFile);
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      reader.abort();
     };
   }, [avatarFile]);
 
@@ -247,7 +252,6 @@ export default function OwnerAddPet() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={handleAvatarChange}
           />
