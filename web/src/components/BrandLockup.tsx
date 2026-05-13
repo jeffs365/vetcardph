@@ -9,7 +9,7 @@ export function BrandMark({ className }: BrandMarkProps) {
     <img
       src="/vetcard-icon.svg"
       alt="VetCard"
-      className={cn("size-16 rounded-[1.35rem] object-cover shadow-float", className)}
+      className={cn("size-16 object-cover shadow-float", className)}
     />
   );
 }
@@ -42,7 +42,7 @@ export function BrandWordmark({ className, compact = false }: BrandWordmarkProps
 export function BrandLockup({ className, compact = false }: BrandLockupProps) {
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <BrandMark className={compact ? "size-12 rounded-[1rem]" : "size-16"} />
+      <BrandMark className={compact ? "size-12" : "size-16"} />
       <div className="min-w-0">
         <BrandWordmark compact={compact} />
       </div>

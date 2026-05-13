@@ -80,7 +80,7 @@ export default function AppLayout({
 
   const headerTitle = title ?? (
     <>
-      <BrandMark className="size-7 rounded-[0.8rem] shadow-none" />
+      <BrandMark className="size-7 shadow-none" />
       <BrandWordmark compact className="text-lg" />
     </>
   );

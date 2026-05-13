@@ -110,7 +110,7 @@ export default function PublicShare() {
         <main className="flex-1 overflow-y-auto">
           <header className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/70 px-5 py-3 backdrop-blur">
             <Link to="/" className="flex items-center gap-2" aria-label="VetCard home">
-              <BrandMark className="size-7 rounded-[0.8rem] shadow-none" />
+              <BrandMark className="size-7 shadow-none" />
               <BrandWordmark compact className="text-lg" />
             </Link>
             <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">

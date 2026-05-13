@@ -27,7 +27,7 @@ export default function Index() {
         <main className="flex min-h-dvh flex-col">
           <header className="flex h-[78px] items-center justify-center bg-[#f8fcfd] px-5">
             <Link to="/" className="flex items-center gap-2" aria-label="VetCard home">
-              <BrandMark className="size-9 rounded-lg shadow-none" />
+              <BrandMark className="size-9 shadow-none" />
               <div className="font-display text-[2rem] font-extrabold leading-none tracking-normal">
                 <span className="text-[#075863]">Vet</span>
                 <span className="text-[#d08a3a]">Card</span>
