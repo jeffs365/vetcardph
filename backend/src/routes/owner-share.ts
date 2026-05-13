@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db'
+import { resolvePetAvatarUrl } from '../lib/pet-avatars'
 import { requireOwnerSession } from '../lib/owner-session'
 
 const createShareTokenSchema = z.object({
@@ -63,19 +64,24 @@ export const ownerShareRoutes: FastifyPluginAsync = async (app) => {
     })
 
     return {
-      tokens: tokens.map((token) => ({
-        id: token.id,
-        petId: token.petId,
-        type: token.type,
-        publicToken: token.publicToken,
-        expiresAt: token.expiresAt,
-        revokedAt: token.revokedAt,
-        lastViewedAt: token.lastViewedAt,
-        viewCount: token.viewCount,
-        createdAt: token.createdAt,
-        isActive: isShareActive(token),
-        pet: token.pet,
-      })),
+      tokens: await Promise.all(
+        tokens.map(async (token) => ({
+          id: token.id,
+          petId: token.petId,
+          type: token.type,
+          publicToken: token.publicToken,
+          expiresAt: token.expiresAt,
+          revokedAt: token.revokedAt,
+          lastViewedAt: token.lastViewedAt,
+          viewCount: token.viewCount,
+          createdAt: token.createdAt,
+          isActive: isShareActive(token),
+          pet: {
+            ...token.pet,
+            avatarUrl: await resolvePetAvatarUrl(token.pet.avatarUrl),
+          },
+        })),
+      ),
     }
   })
 

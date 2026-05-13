@@ -1,11 +1,13 @@
-import crypto from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import type { FastifyPluginAsync } from 'fastify'
-import sharp from 'sharp'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { parseDateInput } from '../lib/dates'
+import {
+  deleteStoredPetAvatar,
+  isAcceptedPetAvatarValue,
+  resolvePetAvatarUrl,
+  storePetAvatar,
+} from '../lib/pet-avatars'
 import { requireOwnerSession } from '../lib/owner-session'
 import {
   toAccessSummary,
@@ -19,7 +21,7 @@ import {
 
 const ownerPetSchema = z.object({
   petName: z.string().trim().min(1).max(80),
-  avatarUrl: z.string().trim().startsWith('/uploads/pets/avatar/').max(255).optional().or(z.literal('')),
+  avatarUrl: z.string().trim().max(512).refine(isAcceptedPetAvatarValue).optional().or(z.literal('')),
   species: z.string().trim().min(1).max(40),
   breed: z.string().trim().min(1).max(80),
   color: z.string().trim().min(1).max(80),
@@ -28,29 +30,6 @@ const ownerPetSchema = z.object({
   birthDate: z.string().optional().or(z.literal('')),
   ageLabel: z.string().trim().max(40).optional().or(z.literal('')),
 })
-
-const petAvatarDir = path.resolve(__dirname, '../../../uploads/pets/avatar')
-
-async function ensurePetAvatarDir() {
-  await fs.mkdir(petAvatarDir, { recursive: true })
-}
-
-function createAvatarFilename(ownerId: string) {
-  return `owner-${ownerId}-${Date.now()}-${crypto.randomUUID()}.webp`
-}
-
-async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
-  if (!avatarUrl) {
-    return
-  }
-
-  const filename = path.basename(avatarUrl)
-  if (!filename) {
-    return
-  }
-
-  await fs.rm(path.join(petAvatarDir, filename), { force: true })
-}
 
 export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
   app.post('/pets/avatar/upload', async (request, reply) => {
@@ -73,23 +52,18 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Uploaded image is empty.' })
     }
 
-    await ensurePetAvatarDir()
-    const filename = createAvatarFilename(session.ownerId)
-    const outputPath = path.join(petAvatarDir, filename)
-
     try {
-      await sharp(buffer)
-        .rotate()
-        .resize(512, 512, { fit: 'cover', position: 'centre' })
-        .webp({ quality: 82 })
-        .toFile(outputPath)
-    } catch {
+      const avatarUrl = await storePetAvatar({
+        buffer,
+        scope: 'owner',
+        scopeId: session.ownerId,
+      })
+
+      return reply.code(201).send({ avatarUrl })
+    } catch (error) {
+      request.log.error({ err: error }, 'Owner pet avatar upload failed.')
       return reply.code(400).send({ message: 'Could not process that image file.' })
     }
-
-    return reply.code(201).send({
-      avatarUrl: `/uploads/pets/avatar/${filename}`,
-    })
   })
 
   app.post('/pets', async (request, reply) => {
@@ -169,7 +143,11 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
     })
 
     if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
-      await deleteStoredAvatar(previousAvatarUrl)
+      try {
+        await deleteStoredPetAvatar(previousAvatarUrl)
+      } catch (error) {
+        request.log.warn({ err: error, petId: existing.id }, 'Previous owner pet avatar cleanup failed.')
+      }
     }
 
     return { pet }
@@ -211,10 +189,10 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
     })
 
     return {
-      pets: pets.map((pet) => ({
+      pets: await Promise.all(pets.map(async (pet) => ({
         id: pet.id,
         name: pet.name,
-        avatarUrl: pet.avatarUrl,
+        avatarUrl: await resolvePetAvatarUrl(pet.avatarUrl),
         species: pet.species,
         breed: pet.breed,
         color: pet.color,
@@ -229,7 +207,7 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
           hasSharedHistory: pet.clinicAccesses.length > 1,
         },
         clinics: pet.clinicAccesses.map((access) => access.clinic),
-      })),
+      }))),
     }
   })
 
@@ -327,7 +305,7 @@ export const ownerPetRoutes: FastifyPluginAsync = async (app) => {
       pet: {
         id: pet.id,
         name: pet.name,
-        avatarUrl: pet.avatarUrl,
+        avatarUrl: await resolvePetAvatarUrl(pet.avatarUrl),
         species: pet.species,
         breed: pet.breed,
         color: pet.color,

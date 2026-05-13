@@ -1,14 +1,16 @@
-import crypto from 'node:crypto'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import type { FastifyPluginAsync } from 'fastify'
-import sharp from 'sharp'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { createAuditEntry } from '../lib/audit'
 import { parseDateInput } from '../lib/dates'
 import { requireAuth } from '../lib/auth'
 import { normalizePhilippineMobile, normalizePhilippineMobileSearch } from '../lib/phones'
+import {
+  deleteStoredPetAvatar,
+  isAcceptedPetAvatarValue,
+  resolvePetAvatarUrl,
+  storePetAvatar,
+} from '../lib/pet-avatars'
 import {
   toAccessSummary,
   toOwnerSummary,
@@ -19,29 +21,6 @@ import {
   toPreventiveHistoryRecord,
   toVisitHistoryRecord,
 } from '../lib/serializers'
-
-const petAvatarDir = path.resolve(__dirname, '../../../uploads/pets/avatar')
-
-async function ensurePetAvatarDir() {
-  await fs.mkdir(petAvatarDir, { recursive: true })
-}
-
-function createAvatarFilename(clinicId: string) {
-  return `${clinicId}-${Date.now()}-${crypto.randomUUID()}.webp`
-}
-
-async function deleteStoredAvatar(avatarUrl: string | null | undefined) {
-  if (!avatarUrl) {
-    return
-  }
-
-  const filename = path.basename(avatarUrl)
-  if (!filename) {
-    return
-  }
-
-  await fs.rm(path.join(petAvatarDir, filename), { force: true })
-}
 
 function getAgeInMonthsFromDate(value: Date | null | undefined) {
   if (!value) {
@@ -110,7 +89,7 @@ function getAgeBucket(birthDate: Date | null | undefined, ageLabel: string | nul
 
 const petSchema = z.object({
   petName: z.string().trim().min(1).max(80),
-  avatarUrl: z.string().trim().startsWith('/uploads/pets/avatar/').max(255).optional().or(z.literal('')),
+  avatarUrl: z.string().trim().max(512).refine(isAcceptedPetAvatarValue).optional().or(z.literal('')),
   species: z.string().trim().min(1).max(40),
   breed: z.string().trim().min(1).max(80),
   color: z.string().trim().min(1).max(80),
@@ -154,23 +133,18 @@ export const petRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ message: 'Uploaded image is empty.' })
     }
 
-    await ensurePetAvatarDir()
-    const filename = createAvatarFilename(request.user.clinicId)
-    const outputPath = path.join(petAvatarDir, filename)
-
     try {
-      await sharp(buffer)
-        .rotate()
-        .resize(512, 512, { fit: 'cover', position: 'centre' })
-        .webp({ quality: 82 })
-        .toFile(outputPath)
-    } catch {
+      const avatarUrl = await storePetAvatar({
+        buffer,
+        scope: 'clinic',
+        scopeId: request.user.clinicId,
+      })
+
+      return reply.code(201).send({ avatarUrl })
+    } catch (error) {
+      request.log.error({ err: error }, 'Clinic pet avatar upload failed.')
       return reply.code(400).send({ message: 'Could not process that image file.' })
     }
-
-    return reply.code(201).send({
-      avatarUrl: `/uploads/pets/avatar/${filename}`,
-    })
   })
 
   app.get('/pets', async (request, reply) => {
@@ -270,7 +244,14 @@ export const petRoutes: FastifyPluginAsync = async (app) => {
     const filteredPets = query.age ? pets.filter((pet) => getAgeBucket(pet.birthDate, pet.ageLabel) === query.age) : pets
 
     return {
-      pets: filteredPets.map((pet) => toPetListItem(pet)),
+      pets: await Promise.all(
+        filteredPets.map(async (pet) =>
+          toPetListItem({
+            ...pet,
+            avatarUrl: await resolvePetAvatarUrl(pet.avatarUrl),
+          }),
+        ),
+      ),
     }
   })
 
@@ -350,10 +331,15 @@ export const petRoutes: FastifyPluginAsync = async (app) => {
 
     return {
       owner: toOwnerSummary(owner),
-      pets: pets.map((pet) => ({
-        ...toPetListItem(pet),
-        linkedToCurrentClinic: pet.clinicAccesses.some((access) => access.clinicId === request.user.clinicId),
-      })),
+      pets: await Promise.all(
+        pets.map(async (pet) => ({
+          ...toPetListItem({
+            ...pet,
+            avatarUrl: await resolvePetAvatarUrl(pet.avatarUrl),
+          }),
+          linkedToCurrentClinic: pet.clinicAccesses.some((access) => access.clinicId === request.user.clinicId),
+        })),
+      ),
     }
   })
 
@@ -664,7 +650,7 @@ export const petRoutes: FastifyPluginAsync = async (app) => {
       pet: {
         id: pet.id,
         name: pet.name,
-        avatarUrl: pet.avatarUrl,
+        avatarUrl: await resolvePetAvatarUrl(pet.avatarUrl),
         species: pet.species,
         breed: pet.breed,
         color: pet.color,
@@ -777,7 +763,11 @@ export const petRoutes: FastifyPluginAsync = async (app) => {
     })
 
     if (previousAvatarUrl && previousAvatarUrl !== nextAvatarUrl) {
-      await deleteStoredAvatar(previousAvatarUrl)
+      try {
+        await deleteStoredPetAvatar(previousAvatarUrl)
+      } catch (error) {
+        request.log.warn({ err: error, petId: existing.id }, 'Previous pet avatar cleanup failed.')
+      }
     }
 
     return { pet }

@@ -6,6 +6,7 @@ This runbook is for the first public `vetcard.ph` deployment. The recommended fi
 
 - `https://vetcard.ph` -> Azure App Service for the React app and `/api/*`
 - Supabase Postgres -> Prisma `DATABASE_URL`
+- Supabase Storage -> private `pet-avatars` bucket for pet photos
 - GitHub private repo -> source control and GitHub Actions deploys
 - Azure App Service managed certificate -> HTTPS
 
@@ -95,6 +96,10 @@ az webapp config appsettings set \
     OWNER_OTP_DELIVERY_MODE=disabled \
     PHILSMS_SENDER_ID=PhilSMS \
     PHILSMS_API_URL=https://dashboard.philsms.com/api/v3/sms/send \
+    SUPABASE_URL="https://<project-ref>.supabase.co" \
+    SUPABASE_SERVICE_ROLE_KEY="<supabase-service-role-or-secret-key>" \
+    SUPABASE_STORAGE_BUCKET=pet-avatars \
+    SUPABASE_STORAGE_SIGNED_URL_SECONDS=3600 \
     JWT_SECRET="<generate-32-plus-random-chars>" \
     COOKIE_SECRET="<generate-32-plus-random-chars>" \
     DATABASE_URL="<supabase-session-pooler-url>"
@@ -211,7 +216,7 @@ Then test:
 
 ## 7. Known follow-up before broad launch
 
-- Move uploaded files off the App Service filesystem if uploads become important. App Service storage is not the right long-term place for pet photos/documents.
+- Move any future document uploads off the App Service filesystem. Pet avatar uploads now use the private Supabase Storage `pet-avatars` bucket.
 - Add backups and restore testing for Supabase.
 - Decide whether `www.vetcard.ph` redirects to `vetcard.ph`.
 - Keep the first production repo private until sensitive docs and lead artifacts are separated.

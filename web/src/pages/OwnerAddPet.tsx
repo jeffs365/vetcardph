@@ -124,8 +124,8 @@ export default function OwnerAddPet() {
           body: formData,
         });
         avatarUrl = upload.avatarUrl;
-      } else if (isEditing) {
-        avatarUrl = avatarAction === "remove" ? "" : storedAvatarUrl ?? "";
+      } else if (isEditing && avatarAction === "remove") {
+        avatarUrl = "";
       }
 
       return apiRequest<{ pet: { id: string } }>(isEditing ? `/owner/pets/${petId}` : "/owner/pets", {

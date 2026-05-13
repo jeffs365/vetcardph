@@ -5,6 +5,7 @@ import { prisma } from '../db'
 import { createAuditEntry } from '../lib/audit'
 import { endOfDay, parseDateInput, startOfDay } from '../lib/dates'
 import { requireAuth, requireStaffRole } from '../lib/auth'
+import { resolvePetAvatarUrl } from '../lib/pet-avatars'
 import { toOwnerSummary } from '../lib/serializers'
 
 const appointmentSchema = z.object({
@@ -135,6 +136,7 @@ export const appointmentRoutes: FastifyPluginAsync = async (app) => {
         ...appointment,
         pet: {
           ...appointment.pet,
+          avatarUrl: await resolvePetAvatarUrl(appointment.pet.avatarUrl),
           owner: toOwnerSummary(appointment.pet.owner),
         },
       },
@@ -217,13 +219,16 @@ export const appointmentRoutes: FastifyPluginAsync = async (app) => {
     })
 
     return {
-      appointments: appointments.map((appointment) => ({
-        ...appointment,
-        pet: {
-          ...appointment.pet,
-          owner: toOwnerSummary(appointment.pet.owner),
-        },
-      })),
+      appointments: await Promise.all(
+        appointments.map(async (appointment) => ({
+          ...appointment,
+          pet: {
+            ...appointment.pet,
+            avatarUrl: await resolvePetAvatarUrl(appointment.pet.avatarUrl),
+            owner: toOwnerSummary(appointment.pet.owner),
+          },
+        })),
+      ),
     }
   })
 

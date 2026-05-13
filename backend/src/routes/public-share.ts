@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../db'
+import { resolvePetAvatarUrl } from '../lib/pet-avatars'
 import {
   toOwnerSummary,
   toPetAllergy,
@@ -129,6 +130,8 @@ export const publicShareRoutes: FastifyPluginAsync = async (app) => {
       },
     })
 
+    const petAvatarUrl = await resolvePetAvatarUrl(token.pet.avatarUrl)
+
     if (token.type === 'EMERGENCY') {
       return {
         share: {
@@ -137,7 +140,7 @@ export const publicShareRoutes: FastifyPluginAsync = async (app) => {
           pet: {
             id: token.pet.id,
             name: token.pet.name,
-            avatarUrl: token.pet.avatarUrl,
+            avatarUrl: petAvatarUrl,
             species: token.pet.species,
             breed: token.pet.breed,
             color: token.pet.color,
@@ -165,7 +168,7 @@ export const publicShareRoutes: FastifyPluginAsync = async (app) => {
         pet: {
           id: token.pet.id,
           name: token.pet.name,
-          avatarUrl: token.pet.avatarUrl,
+          avatarUrl: petAvatarUrl,
           species: token.pet.species,
           breed: token.pet.breed,
           color: token.pet.color,

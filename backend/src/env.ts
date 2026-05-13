@@ -33,6 +33,10 @@ const envSchema = z.object({
   PHILSMS_API_TOKEN: z.string().min(1).optional(),
   PHILSMS_SENDER_ID: z.string().min(1).max(11).default('PhilSMS'),
   PHILSMS_API_URL: z.string().url().default('https://dashboard.philsms.com/api/v3/sms/send'),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  SUPABASE_STORAGE_BUCKET: z.string().min(1).default('pet-avatars'),
+  SUPABASE_STORAGE_SIGNED_URL_SECONDS: z.coerce.number().int().positive().default(60 * 60),
 })
 
 const parsedEnv = envSchema.parse(process.env)

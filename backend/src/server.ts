@@ -32,6 +32,7 @@ export function buildServer() {
   const uploadsRoot = path.resolve(__dirname, '../../uploads')
   const webRoot = path.resolve(__dirname, '../../web/dist')
   const webIndexPath = path.join(webRoot, 'index.html')
+  const storageOrigin = env.SUPABASE_URL ? new URL(env.SUPABASE_URL).origin : null
   const corsOrigin =
     env.CORS_ORIGIN === '*'
       ? true
@@ -40,6 +41,11 @@ export function buildServer() {
           .filter(Boolean)
 
   app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        imgSrc: storageOrigin ? ["'self'", 'data:', storageOrigin] : ["'self'", 'data:'],
+      },
+    },
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 
